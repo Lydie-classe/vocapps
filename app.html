@@ -994,6 +994,7 @@
       </div>
       <div id="api-save-msg" style="font-size:0.85em; margin-top:5px; min-height:16px;"></div>
     </div>
+    <button id="btn-change-api" class="btn-action btn-orange" onclick="openApiSection()" style="display:none; margin-bottom:16px;">🔑 Changer la clé API</button>
 
     <!-- Nom de la liste -->
     <div class="section">
@@ -1201,8 +1202,8 @@ function showScreen(id) {
     const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
     const key = (profiles[currentTeacher] && profiles[currentTeacher].pexelsKey) || '';
     document.getElementById('pexels-key').value = key;
-    document.getElementById('api-save-msg').textContent = key ? 'Clé enregistrée.' : '';
-    document.getElementById('api-save-msg').style.color = '#2e7d32';
+    document.getElementById('api-key-section').style.display = key ? 'none' : 'block';
+    document.getElementById('btn-change-api').style.display = key ? 'inline-block' : 'none';
     document.getElementById('teacher-name-display').textContent = currentTeacher ? '👤 ' + currentTeacher : '';
     refreshListSelect();
   }
@@ -1394,14 +1395,19 @@ function saveApiKey() {
   if (!profiles[currentTeacher]) profiles[currentTeacher] = {};
   profiles[currentTeacher].pexelsKey = key;
   localStorage.setItem('teacher-profiles', JSON.stringify(profiles));
-  const msg = document.getElementById('api-save-msg');
   if (key) {
-    msg.textContent = '✓ Clé enregistrée !';
-    msg.style.color = '#2e7d32';
+    document.getElementById('api-key-section').style.display = 'none';
+    document.getElementById('btn-change-api').style.display = 'inline-block';
   } else {
-    msg.textContent = 'Clé supprimée.';
-    msg.style.color = '#888';
+    document.getElementById('api-key-section').style.display = 'block';
+    document.getElementById('btn-change-api').style.display = 'none';
   }
+}
+
+function openApiSection() {
+  document.getElementById('api-key-section').style.display = 'block';
+  document.getElementById('btn-change-api').style.display = 'none';
+  document.getElementById('pexels-key').focus();
 }
 
 function saveLists() {
