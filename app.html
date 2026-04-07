@@ -56,6 +56,26 @@
       color: #333;
       outline: none;
     }
+    .pwd-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    .pwd-wrapper .login-input {
+      padding-right: 46px;
+    }
+    .pwd-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2em;
+      padding: 4px;
+      color: #888;
+      line-height: 1;
+    }
     .login-input::placeholder { color: #aaa; }
 
     .btn-login-main {
@@ -203,7 +223,7 @@
     .search-img {
       width: 100%;
       aspect-ratio: 1;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 10px;
       cursor: pointer;
       border: 3px solid transparent;
@@ -267,7 +287,7 @@
     .img-slot img {
       width: 80px;
       height: 80px;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 8px;
     }
     .img-slot .slot-hint {
@@ -395,7 +415,7 @@
     .word-item img {
       width: 50px;
       height: 50px;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 8px;
     }
     .word-item .word-text {
@@ -589,7 +609,7 @@
     .choice-card img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
     .choice-card.correct {
       border-color: #4caf50;
@@ -859,10 +879,13 @@
     <input class="login-input" type="text" id="login-name"
       placeholder="Identifiant"
       oninput="resetLoginError()">
-    <input class="login-input" type="password" id="login-password"
-      placeholder="Mot de passe"
-      onkeydown="if(event.key==='Enter') doLogin()"
-      oninput="resetLoginError()">
+    <div class="pwd-wrapper">
+      <input class="login-input" type="password" id="login-password"
+        placeholder="Mot de passe"
+        onkeydown="if(event.key==='Enter') doLogin()"
+        oninput="resetLoginError()">
+      <button class="pwd-toggle" type="button" onclick="togglePwd('login-password', this)">👁</button>
+    </div>
     <div class="login-error" id="login-error"></div>
     <button class="btn-login-main" onclick="doLogin()">Se connecter</button>
     <button class="btn-login-link" onclick="showForgotForm()">Mot de passe oublié</button>
@@ -875,12 +898,18 @@
     <input class="login-input" type="text" id="reg-name"
       placeholder="Identifiant (prénom, nom...)"
       oninput="resetLoginError()">
-    <input class="login-input" type="password" id="reg-password"
-      placeholder="Mot de passe"
-      oninput="resetLoginError()">
-    <input class="login-input" type="password" id="reg-password2"
-      placeholder="Confirmer le mot de passe"
-      oninput="resetLoginError()">
+    <div class="pwd-wrapper">
+      <input class="login-input" type="password" id="reg-password"
+        placeholder="Mot de passe"
+        oninput="resetLoginError()">
+      <button class="pwd-toggle" type="button" onclick="togglePwd('reg-password', this)">👁</button>
+    </div>
+    <div class="pwd-wrapper">
+      <input class="login-input" type="password" id="reg-password2"
+        placeholder="Confirmer le mot de passe"
+        oninput="resetLoginError()">
+      <button class="pwd-toggle" type="button" onclick="togglePwd('reg-password2', this)">👁</button>
+    </div>
     <select class="login-input" id="reg-question" style="color:#555;">
       <option value="">— Question secrète —</option>
       <option>Nom de votre animal de compagnie ?</option>
@@ -909,13 +938,19 @@
       <input class="login-input" type="text" id="forgot-answer"
         placeholder="Réponse secrète"
         oninput="resetLoginError()">
-      <input class="login-input" type="password" id="forgot-newpwd"
-        placeholder="Nouveau mot de passe"
-        oninput="resetLoginError()">
-      <input class="login-input" type="password" id="forgot-newpwd2"
-        placeholder="Confirmer le nouveau mot de passe"
-        onkeydown="if(event.key==='Enter') doResetPassword()"
-        oninput="resetLoginError()">
+      <div class="pwd-wrapper">
+        <input class="login-input" type="password" id="forgot-newpwd"
+          placeholder="Nouveau mot de passe"
+          oninput="resetLoginError()">
+        <button class="pwd-toggle" type="button" onclick="togglePwd('forgot-newpwd', this)">👁</button>
+      </div>
+      <div class="pwd-wrapper">
+        <input class="login-input" type="password" id="forgot-newpwd2"
+          placeholder="Confirmer le nouveau mot de passe"
+          onkeydown="if(event.key==='Enter') doResetPassword()"
+          oninput="resetLoginError()">
+        <button class="pwd-toggle" type="button" onclick="togglePwd('forgot-newpwd2', this)">👁</button>
+      </div>
     </div>
     <div class="login-error" id="forgot-error"></div>
     <button class="btn-login-main" id="forgot-btn" onclick="doForgotStep()">Suivant</button>
@@ -1115,7 +1150,16 @@
       <h3 id="student-modal-title"></h3>
       <div style="display:flex; gap:8px;">
         <button class="btn-modal-close" style="background:#4caf50; color:white;" onclick="exportStudentPDF()">⬇ PDF</button>
+        <button class="btn-modal-close" style="background:#f44336; color:white;" onclick="toggleDeleteMenu()">🗑 Supprimer</button>
         <button class="btn-modal-close" onclick="closeStudentModal()">× Fermer</button>
+      </div>
+    </div>
+    <div id="delete-menu" style="display:none; background:#fff3f3; border:1px solid #f44336; border-radius:10px; padding:12px; margin-bottom:12px; display:none;">
+      <p style="font-size:0.9em; color:#c62828; font-weight:bold; margin-bottom:8px;">Que voulez-vous supprimer ?</p>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="btn-modal-close" style="background:#f44336; color:white; text-align:left;" onclick="deleteStudentResults('list')">Résultats sur la liste actuelle uniquement</button>
+        <button class="btn-modal-close" style="background:#b71c1c; color:white; text-align:left;" onclick="deleteStudentResults('all')">Tous les résultats de cet élève</button>
+        <button class="btn-modal-close" onclick="toggleDeleteMenu()">Annuler</button>
       </div>
     </div>
     <div id="student-modal-content"></div>
@@ -1200,6 +1244,17 @@ function showRegisterForm() {
 function resetLoginError() {
   document.getElementById('login-error').textContent = '';
   document.getElementById('register-error').textContent = '';
+}
+
+function togglePwd(id, btn) {
+  const input = document.getElementById(id);
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
 }
 
 function doLogin() {
@@ -1546,6 +1601,33 @@ function closeStudentModal() {
   document.getElementById('student-modal').classList.remove('show');
 }
 
+function toggleDeleteMenu() {
+  const menu = document.getElementById('delete-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function deleteStudentResults(scope) {
+  const studentName = document.getElementById('student-modal-title').textContent.replace('👤 ', '').trim();
+  const allResults = JSON.parse(localStorage.getItem(resultsKey()) || '{}');
+
+  if (scope === 'list') {
+    const listLabel = currentListName ? ' sur la liste "' + currentListName + '"' : '';
+    if (!confirm('Supprimer les résultats de ' + studentName + listLabel + ' ? Cette action est irréversible.')) return;
+    if (allResults[currentListName]) {
+      allResults[currentListName] = allResults[currentListName].filter(r => r.student !== studentName);
+    }
+  } else {
+    if (!confirm('Supprimer TOUS les résultats de ' + studentName + ' (toutes les listes) ? Cette action est irréversible.')) return;
+    Object.keys(allResults).forEach(listName => {
+      allResults[listName] = allResults[listName].filter(r => r.student !== studentName);
+    });
+  }
+
+  localStorage.setItem(resultsKey(), JSON.stringify(allResults));
+  closeStudentModal();
+  renderResults();
+}
+
 function exportStudentPDF() {
   const { jsPDF } = window.jspdf;
   const studentName = document.getElementById('student-modal-title').textContent.replace('👤 ', '').trim();
@@ -1660,8 +1742,8 @@ function renderWordList() {
     li.className = 'word-item';
     li.innerHTML = `
       <img src="${item.image}" alt="${item.word}" style="border:2px solid #4caf50;">
-      ${d1 ? `<img src="${d1}" alt="piège" style="border:2px solid #f44336; width:40px; height:40px; object-fit:cover; border-radius:6px;">` : ''}
-      ${d2 ? `<img src="${d2}" alt="piège" style="border:2px solid #f44336; width:40px; height:40px; object-fit:cover; border-radius:6px;">` : ''}
+      ${d1 ? `<img src="${d1}" alt="piège" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
+      ${d2 ? `<img src="${d2}" alt="piège" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
       <span class="word-text">${item.word}</span>
       <button class="btn-del" onclick="removeWord(${idx})">×</button>
     `;
