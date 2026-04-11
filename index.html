@@ -1781,7 +1781,7 @@ function renderResults() {
 }
 
 function showStudentAllResults(studentName) {
-  const allResults = JSON.parse(localStorage.getItem(resultsKey()) || '{}');
+  const allResults = cachedResults;
   const content = document.getElementById('student-modal-content');
   document.getElementById('student-modal-title').textContent = '👤 ' + studentName;
   content.innerHTML = '';
