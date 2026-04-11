@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Vocapps</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -309,6 +312,53 @@
       display: none;
     }
     .img-slot.filled .slot-remove { display: block; }
+
+    /* Toggle image / texte dans les slots */
+    .slot-type-toggle {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 4px;
+      z-index: 1;
+    }
+    .slot-type-btn {
+      background: rgba(255,255,255,0.35);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 0.8em;
+      cursor: pointer;
+      color: #555;
+    }
+    .slot-type-btn.active {
+      background: rgba(255,255,255,0.85);
+      border-color: white;
+      font-weight: bold;
+      color: #333;
+    }
+    .slot-text-input {
+      width: 90%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.95);
+      font-size: 0.95em;
+      text-align: center;
+      color: #333;
+      margin-top: 4px;
+      outline: none;
+    }
+    .word-thumb-text {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.85em;
+      font-weight: bold;
+      cursor: pointer;
+      white-space: nowrap;
+      max-width: 70px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     /* Résultats */
     .result-card {
@@ -652,6 +702,20 @@
       height: 100%;
       object-fit: contain;
     }
+    .choice-text {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+      padding: 16px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      word-break: break-word;
+      hyphens: auto;
+    }
     .choice-card.correct {
       border-color: #4caf50;
       animation: pulseCorrect 0.5s ease;
@@ -939,6 +1003,9 @@
     <input class="login-input" type="text" id="reg-name"
       placeholder="Identifiant (prénom, nom...)"
       oninput="resetLoginError()">
+    <input class="login-input" type="email" id="reg-email"
+      placeholder="Adresse email (pour récupérer le mot de passe)"
+      oninput="resetLoginError()">
     <div class="pwd-wrapper">
       <input class="login-input" type="password" id="reg-password"
         placeholder="Mot de passe"
@@ -948,21 +1015,10 @@
     <div class="pwd-wrapper">
       <input class="login-input" type="password" id="reg-password2"
         placeholder="Confirmer le mot de passe"
+        onkeydown="if(event.key==='Enter') doRegister()"
         oninput="resetLoginError()">
       <button class="pwd-toggle" type="button" onclick="togglePwd('reg-password2', this)">👁</button>
     </div>
-    <select class="login-input" id="reg-question" style="color:#555;">
-      <option value="">— Question secrète —</option>
-      <option>Nom de votre animal de compagnie ?</option>
-      <option>Prénom de votre mère ?</option>
-      <option>Ville où vous êtes né(e) ?</option>
-      <option>Nom de votre école ?</option>
-      <option>Couleur préférée ?</option>
-    </select>
-    <input class="login-input" type="text" id="reg-answer"
-      placeholder="Réponse secrète"
-      onkeydown="if(event.key==='Enter') doRegister()"
-      oninput="resetLoginError()">
     <div class="login-error" id="register-error"></div>
     <button class="btn-login-main" onclick="doRegister()">Créer le compte</button>
     <button class="btn-login-link" onclick="showLoginForm()">J'ai déjà un compte</button>
@@ -970,31 +1026,17 @@
 
   <!-- Formulaire mot de passe oublié -->
   <div class="login-box" id="forgot-form" style="display:none">
-    <h3 id="forgot-title">Mot de passe oublié</h3>
+    <h3>Mot de passe oublié</h3>
+    <p style="font-size:0.88em; color:rgba(255,255,255,0.8); line-height:1.5;">Entre ton identifiant ci-dessous. Un email de réinitialisation sera envoyé à l'adresse enregistrée.</p>
     <input class="login-input" type="text" id="forgot-name"
       placeholder="Identifiant"
+      onkeydown="if(event.key==='Enter') doForgotPassword()"
       oninput="resetLoginError()">
-    <div id="forgot-question-block" style="display:none; flex-direction:column; gap:14px;">
-      <p id="forgot-question-text" style="color:rgba(255,255,255,0.9); font-size:0.95em;"></p>
-      <input class="login-input" type="text" id="forgot-answer"
-        placeholder="Réponse secrète"
-        oninput="resetLoginError()">
-      <div class="pwd-wrapper">
-        <input class="login-input" type="password" id="forgot-newpwd"
-          placeholder="Nouveau mot de passe"
-          oninput="resetLoginError()">
-        <button class="pwd-toggle" type="button" onclick="togglePwd('forgot-newpwd', this)">👁</button>
-      </div>
-      <div class="pwd-wrapper">
-        <input class="login-input" type="password" id="forgot-newpwd2"
-          placeholder="Confirmer le nouveau mot de passe"
-          onkeydown="if(event.key==='Enter') doResetPassword()"
-          oninput="resetLoginError()">
-        <button class="pwd-toggle" type="button" onclick="togglePwd('forgot-newpwd2', this)">👁</button>
-      </div>
-    </div>
     <div class="login-error" id="forgot-error"></div>
-    <button class="btn-login-main" id="forgot-btn" onclick="doForgotStep()">Suivant</button>
+    <div id="forgot-success" style="display:none; color:#a5d6a7; font-size:0.95em; text-align:center; padding:8px 0;">
+      ✅ Email envoyé ! Vérifie ta boîte mail.
+    </div>
+    <button class="btn-login-main" id="forgot-btn" onclick="doForgotPassword()">Envoyer l'email</button>
     <button class="btn-login-link" onclick="showLoginForm()">Retour</button>
   </div>
 </div>
@@ -1048,6 +1090,7 @@
         <select id="list-select" onchange="loadList()">
           <option value="">— Sélectionner une liste —</option>
         </select>
+        <button class="btn-action btn-orange" onclick="renameList()">Renommer</button>
         <button class="btn-action btn-red" onclick="deleteList()">Supprimer</button>
       </div>
     </div>
@@ -1060,22 +1103,37 @@
       </div>
 
       <!-- 3 emplacements -->
-      <p style="font-size:0.9em; color:#666; margin:8px 0;">Clique sur un emplacement, puis cherche ou télécharge une image :</p>
+      <p style="font-size:0.9em; color:#666; margin:8px 0;">Choisis image ou texte pour chaque emplacement :</p>
       <div class="slots-row">
         <div class="img-slot slot-correct" id="slot-0" onclick="activateSlot(0)">
           <button class="slot-remove" onclick="event.stopPropagation(); clearSlot(0)">×</button>
+          <div class="slot-type-toggle">
+            <button class="slot-type-btn active" id="slot-0-img-btn" onclick="event.stopPropagation(); setSlotType(0,'image')" title="Image">🖼</button>
+            <button class="slot-type-btn" id="slot-0-txt-btn" onclick="event.stopPropagation(); setSlotType(0,'text')" title="Texte">✏️</button>
+          </div>
           <span class="slot-label">Bonne réponse</span>
           <span class="slot-hint">Cliquer pour choisir</span>
+          <input type="text" id="slot-0-text" class="slot-text-input" placeholder="Écrire ici..." style="display:none;" onclick="event.stopPropagation()" oninput="event.stopPropagation(); onSlotTextInput(0)">
         </div>
         <div class="img-slot slot-wrong" id="slot-1" onclick="activateSlot(1)">
           <button class="slot-remove" onclick="event.stopPropagation(); clearSlot(1)">×</button>
+          <div class="slot-type-toggle">
+            <button class="slot-type-btn active" id="slot-1-img-btn" onclick="event.stopPropagation(); setSlotType(1,'image')" title="Image">🖼</button>
+            <button class="slot-type-btn" id="slot-1-txt-btn" onclick="event.stopPropagation(); setSlotType(1,'text')" title="Texte">✏️</button>
+          </div>
           <span class="slot-label">Piège 1</span>
           <span class="slot-hint">Cliquer pour choisir</span>
+          <input type="text" id="slot-1-text" class="slot-text-input" placeholder="Écrire ici..." style="display:none;" onclick="event.stopPropagation()" oninput="event.stopPropagation(); onSlotTextInput(1)">
         </div>
         <div class="img-slot slot-wrong" id="slot-2" onclick="activateSlot(2)">
           <button class="slot-remove" onclick="event.stopPropagation(); clearSlot(2)">×</button>
+          <div class="slot-type-toggle">
+            <button class="slot-type-btn active" id="slot-2-img-btn" onclick="event.stopPropagation(); setSlotType(2,'image')" title="Image">🖼</button>
+            <button class="slot-type-btn" id="slot-2-txt-btn" onclick="event.stopPropagation(); setSlotType(2,'text')" title="Texte">✏️</button>
+          </div>
           <span class="slot-label">Piège 2</span>
           <span class="slot-hint">Cliquer pour choisir</span>
+          <input type="text" id="slot-2-text" class="slot-text-input" placeholder="Écrire ici..." style="display:none;" onclick="event.stopPropagation()" oninput="event.stopPropagation(); onSlotTextInput(2)">
         </div>
       </div>
 
@@ -1165,6 +1223,14 @@
   <button class="home-btn" style="background:white;color:#333;" onclick="closeEnd(); showScreen('home')">Terminer</button>
 </div>
 
+<!-- Overlay chargement -->
+<div id="loading-overlay" style="display:none; position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:16px; padding:32px 40px; text-align:center;">
+    <div style="width:40px; height:40px; border:4px solid #eee; border-top-color:#3949ab; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px;"></div>
+    <p style="color:#555; font-size:1em;">Chargement...</p>
+  </div>
+</div>
+
 <!-- ===== BANNIÈRE RGPD ===== -->
 <div id="rgpd-banner">
   <div class="rgpd-box">
@@ -1229,17 +1295,65 @@
 
 <script>
 // =============================================
+//  FIREBASE
+// =============================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCMuqApeKm9CmErg1rsTspac7BI5O_g5Bk",
+  authDomain: "vocapps-lydie.firebaseapp.com",
+  databaseURL: "https://vocapps-lydie-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "vocapps-lydie",
+  storageBucket: "vocapps-lydie.firebasestorage.app",
+  messagingSenderId: "881311802844",
+  appId: "1:881311802844:web:ef43ff22bad77510201b19"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+// Pas de persistance de session entre fermetures de navigateur
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
+function fbKey(name) { return name.replace(/[.$#[\]/]/g, '_'); }
+
+// Données enseignant (lecture/écriture selon auth.uid)
+function teacherDb(uid) { return db.ref('teachers/' + uid); }
+async function fbGetProfile(uid) {
+  const snap = await teacherDb(uid).child('profile').once('value');
+  return snap.val();
+}
+async function fbGetLists(uid) {
+  const snap = await teacherDb(uid).child('listsJson').once('value');
+  return JSON.parse(snap.val() || '{}');
+}
+function fbSaveLists(uid, data) { teacherDb(uid).child('listsJson').set(JSON.stringify(data)).catch(() => {}); }
+async function fbGetResults(uid) {
+  const snap = await teacherDb(uid).child('resultsJson').once('value');
+  return JSON.parse(snap.val() || '{}');
+}
+function fbSaveResults(uid, data) { teacherDb(uid).child('resultsJson').set(JSON.stringify(data)).catch(() => {}); }
+
+// Table publique identifiant → { uid, email } (lecture seule pour tous)
+async function fbGetUsernameEntry(name) {
+  const snap = await db.ref('usernames/' + fbKey(name)).once('value');
+  return snap.val();
+}
+
+function setLoading(show) {
+  document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+}
+
+// =============================================
 //  DONNÉES
 // =============================================
 let lists = {};
 
-function listsKey() { return 'vocab-lists-' + currentTeacher; }
-function resultsKey() { return 'vocab-results-' + currentTeacher; }
+let cachedResults = {};
 let currentListName = '';
-let activeSlot = -1;          // emplacement en cours de remplissage (0, 1 ou 2)
-let slotImages = ['', '', '']; // URLs des 3 images
-let editingWordCtx = null;    // { wordIdx, slotType } quand on édite une image existante
-let editingWordIdx = null;    // index du mot en cours d'édition complète (null = nouveau mot)
+let currentUid = '';
+let activeSlot = -1;           // emplacement en cours de remplissage (0, 1 ou 2)
+let slotImages = ['', '', '']; // URLs des 3 images (ou 'text:...' pour du texte)
+let slotTypes = ['image', 'image', 'image']; // type de chaque slot
+let editingWordCtx = null;     // { wordIdx, slotType } quand on édite une image existante
+let editingWordIdx = null;     // index du mot en cours d'édition complète (null = nouveau mot)
 
 // Jeu
 let gameWords = [];
@@ -1258,16 +1372,24 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 'teacher') {
-    lists = JSON.parse(localStorage.getItem(listsKey()) || '{}');
+    lists = {};
+    cachedResults = {};
     currentListName = '';
     document.getElementById('add-word-section').style.display = 'none';
-    const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-    const key = (profiles[currentTeacher] && profiles[currentTeacher].pexelsKey) || '';
-    document.getElementById('pexels-key').value = key;
-    document.getElementById('api-key-section').style.display = key ? 'none' : 'block';
-    document.getElementById('btn-change-api').style.display = key ? 'inline-block' : 'none';
     document.getElementById('teacher-name-display').textContent = currentTeacher ? '👤 ' + currentTeacher : '';
-    refreshListSelect();
+    setLoading(true);
+    Promise.all([fbGetProfile(currentUid), fbGetLists(currentUid), fbGetResults(currentUid)])
+      .then(([profile, loadedLists, loadedResults]) => {
+        lists = loadedLists;
+        cachedResults = loadedResults;
+        const key = (profile && profile.pexelsKey) || '';
+        document.getElementById('pexels-key').value = key;
+        document.getElementById('api-key-section').style.display = key ? 'none' : 'block';
+        document.getElementById('btn-change-api').style.display = key ? 'inline-block' : 'none';
+        setLoading(false);
+        refreshListSelect();
+      })
+      .catch(() => setLoading(false));
   }
 }
 
@@ -1275,10 +1397,8 @@ function showScreen(id) {
 //  CONNEXION / INSCRIPTION
 // =============================================
 function initLoginScreen() {
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  const names = Object.keys(profiles);
-  // Si aucun compte : afficher directement l'inscription
-  if (names.length === 0) {
+  // Si aucun compte connu sur cet appareil → inscription directe
+  if (!localStorage.getItem('vocapps-has-account')) {
     showRegisterForm();
   } else {
     showLoginForm();
@@ -1320,90 +1440,110 @@ function togglePwd(id, btn) {
   }
 }
 
-function doLogin() {
+async function doLogin() {
   const name = document.getElementById('login-name').value.trim();
   const pwd = document.getElementById('login-password').value;
   if (!name) { document.getElementById('login-error').textContent = 'Entre ton identifiant.'; return; }
   if (!pwd) { document.getElementById('login-error').textContent = 'Entre ton mot de passe.'; return; }
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  if (!profiles[name] || profiles[name].password !== pwd) {
-    document.getElementById('login-error').textContent = 'Mot de passe incorrect.';
-    return;
+  setLoading(true);
+  try {
+    // Récupérer l'email associé à cet identifiant
+    const entry = await fbGetUsernameEntry(name);
+    if (!entry) {
+      document.getElementById('login-error').textContent = 'Identifiant introuvable.';
+      setLoading(false); return;
+    }
+    // Authentification Firebase
+    const cred = await auth.signInWithEmailAndPassword(entry.email, pwd);
+    currentUid = cred.user.uid;
+    currentTeacher = name;
+    localStorage.setItem('vocapps-has-account', 'true');
+    setLoading(false);
+    showScreen('home');
+  } catch (e) {
+    const msg = (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential')
+      ? 'Mot de passe incorrect.'
+      : 'Erreur de connexion. Vérifiez votre connexion internet.';
+    document.getElementById('login-error').textContent = msg;
+    setLoading(false);
   }
-  currentTeacher = name;
-  showScreen('home');
 }
 
-function doRegister() {
+async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
   const pwd = document.getElementById('reg-password').value;
   const pwd2 = document.getElementById('reg-password2').value;
-  const question = document.getElementById('reg-question').value;
-  const answer = document.getElementById('reg-answer').value.trim().toLowerCase();
   if (!name) { document.getElementById('register-error').textContent = 'Entre un identifiant.'; return; }
+  if (!email) { document.getElementById('register-error').textContent = 'Entre une adresse email.'; return; }
   if (!pwd) { document.getElementById('register-error').textContent = 'Entre un mot de passe.'; return; }
   if (pwd !== pwd2) { document.getElementById('register-error').textContent = 'Les mots de passe ne correspondent pas.'; return; }
-  if (!question) { document.getElementById('register-error').textContent = 'Choisis une question secrète.'; return; }
-  if (!answer) { document.getElementById('register-error').textContent = 'Entre une réponse secrète.'; return; }
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  if (profiles[name]) { document.getElementById('register-error').textContent = 'Cet identifiant existe déjà.'; return; }
-  profiles[name] = { password: pwd, pexelsKey: '', securityQuestion: question, securityAnswer: answer };
-  localStorage.setItem('teacher-profiles', JSON.stringify(profiles));
-  currentTeacher = name;
-  showScreen('home');
+  if (pwd.length < 6) { document.getElementById('register-error').textContent = 'Le mot de passe doit faire au moins 6 caractères.'; return; }
+  setLoading(true);
+  try {
+    // Vérifier que l'identifiant n'est pas déjà pris
+    const existing = await fbGetUsernameEntry(name);
+    if (existing) { document.getElementById('register-error').textContent = 'Cet identifiant existe déjà.'; setLoading(false); return; }
+    // Créer le compte Firebase Auth
+    const cred = await auth.createUserWithEmailAndPassword(email, pwd);
+    const uid = cred.user.uid;
+    // Enregistrer identifiant → uid + email (lecture publique pour login)
+    await db.ref('usernames/' + fbKey(name)).set({ uid, email });
+    // Enregistrer le profil (privé, protégé par les règles Firebase)
+    await teacherDb(uid).child('profile').set({ name, pexelsKey: '' });
+    currentUid = uid;
+    currentTeacher = name;
+    localStorage.setItem('vocapps-has-account', 'true');
+    setLoading(false);
+    showScreen('home');
+  } catch (e) {
+    let msg = 'Erreur de connexion. Vérifiez votre connexion internet.';
+    if (e.code === 'auth/email-already-in-use') msg = 'Cette adresse email est déjà utilisée.';
+    if (e.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
+    if (e.code === 'auth/weak-password') msg = 'Mot de passe trop faible (6 caractères minimum).';
+    document.getElementById('register-error').textContent = msg;
+    setLoading(false);
+  }
 }
 
-let forgotStep = 1;
-
 function showForgotForm() {
-  forgotStep = 1;
   document.getElementById('forgot-name').value = '';
-  document.getElementById('forgot-answer') && (document.getElementById('forgot-answer').value = '');
-  document.getElementById('forgot-newpwd').value = '';
-  document.getElementById('forgot-newpwd2').value = '';
-  document.getElementById('forgot-question-block').style.display = 'none';
-  document.getElementById('forgot-btn').textContent = 'Suivant';
   document.getElementById('forgot-error').textContent = '';
-  document.getElementById('forgot-title').textContent = 'Mot de passe oublié';
+  document.getElementById('forgot-success').style.display = 'none';
+  document.getElementById('forgot-btn').disabled = false;
   document.getElementById('login-form').style.display = 'none';
   document.getElementById('register-form').style.display = 'none';
   document.getElementById('forgot-form').style.display = 'flex';
 }
 
-function doForgotStep() {
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  if (forgotStep === 1) {
-    const name = document.getElementById('forgot-name').value.trim();
-    if (!name) { document.getElementById('forgot-error').textContent = 'Entre ton identifiant.'; return; }
-    if (!profiles[name]) { document.getElementById('forgot-error').textContent = 'Identifiant introuvable.'; return; }
-    if (!profiles[name].securityQuestion) { document.getElementById('forgot-error').textContent = 'Aucune question secrète enregistrée pour ce compte.'; return; }
-    document.getElementById('forgot-question-text').textContent = profiles[name].securityQuestion;
-    document.getElementById('forgot-question-block').style.display = 'flex';
-    document.getElementById('forgot-btn').textContent = 'Réinitialiser';
-    document.getElementById('forgot-error').textContent = '';
-    document.getElementById('forgot-name').disabled = true;
-    forgotStep = 2;
-  } else {
-    const name = document.getElementById('forgot-name').value.trim();
-    const answer = document.getElementById('forgot-answer').value.trim().toLowerCase();
-    const newpwd = document.getElementById('forgot-newpwd').value;
-    const newpwd2 = document.getElementById('forgot-newpwd2').value;
-    if (!answer) { document.getElementById('forgot-error').textContent = 'Entre ta réponse secrète.'; return; }
-    if (answer !== profiles[name].securityAnswer) { document.getElementById('forgot-error').textContent = 'Réponse incorrecte.'; return; }
-    if (!newpwd) { document.getElementById('forgot-error').textContent = 'Entre un nouveau mot de passe.'; return; }
-    if (newpwd !== newpwd2) { document.getElementById('forgot-error').textContent = 'Les mots de passe ne correspondent pas.'; return; }
-    profiles[name].password = newpwd;
-    localStorage.setItem('teacher-profiles', JSON.stringify(profiles));
-    document.getElementById('forgot-name').disabled = false;
-    showLoginForm();
-    document.getElementById('login-error').textContent = '';
-    document.getElementById('login-name').value = name;
+async function doForgotPassword() {
+  const name = document.getElementById('forgot-name').value.trim();
+  if (!name) { document.getElementById('forgot-error').textContent = 'Entre ton identifiant.'; return; }
+  document.getElementById('forgot-error').textContent = '';
+  document.getElementById('forgot-success').style.display = 'none';
+  setLoading(true);
+  try {
+    const entry = await fbGetUsernameEntry(name);
+    if (!entry) {
+      document.getElementById('forgot-error').textContent = 'Identifiant introuvable.';
+      setLoading(false); return;
+    }
+    await auth.sendPasswordResetEmail(entry.email);
+    setLoading(false);
+    document.getElementById('forgot-success').style.display = 'block';
+    document.getElementById('forgot-btn').disabled = true;
+  } catch (e) {
+    document.getElementById('forgot-error').textContent = 'Erreur lors de l\'envoi. Vérifiez votre connexion.';
+    setLoading(false);
   }
 }
 
 function logout() {
+  auth.signOut();
   currentTeacher = '';
+  currentUid = '';
   lists = {};
+  cachedResults = {};
   currentListName = '';
   initLoginScreen();
   showScreen('login');
@@ -1428,41 +1568,47 @@ function validateStudentName() {
   showStudentSelect();
 }
 
-function showStudentSelect() {
-  lists = JSON.parse(localStorage.getItem(listsKey()) || '{}');
+async function showStudentSelect() {
   showScreen('student-select');
   const container = document.getElementById('student-lists');
-  container.innerHTML = '';
-  const names = Object.keys(lists).filter(n => lists[n].length >= 1 && lists[n].every(w => w.distractors && w.distractors.length === 2));
-  if (names.length === 0) {
-    container.innerHTML = '<p class="no-list-msg">Aucune liste disponible.<br>L\'enseignant doit d\'abord créer une liste.</p>';
-    return;
+  container.innerHTML = '<p style="color:#999;">Chargement...</p>';
+  try {
+    lists = await fbGetLists(currentTeacher);
+    container.innerHTML = '';
+    const names = Object.keys(lists).filter(n => lists[n].length >= 1 && lists[n].every(w => w.distractors && w.distractors.length === 2));
+    if (names.length === 0) {
+      container.innerHTML = '<p class="no-list-msg">Aucune liste disponible.<br>L\'enseignant doit d\'abord créer une liste.</p>';
+      return;
+    }
+    names.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'list-pick-btn';
+      btn.textContent = name + ' (' + lists[name].length + ' mots)';
+      btn.onclick = () => startGame(name);
+      container.appendChild(btn);
+    });
+  } catch (e) {
+    container.innerHTML = '<p style="color:red;">Erreur de chargement. Vérifiez votre connexion.</p>';
   }
-  names.forEach(name => {
-    const btn = document.createElement('button');
-    btn.className = 'list-pick-btn';
-    btn.textContent = name + ' (' + lists[name].length + ' mots)';
-    btn.onclick = () => startGame(name);
-    container.appendChild(btn);
-  });
 }
 
 // =============================================
 //  ENSEIGNANT — LISTES
 // =============================================
-function saveApiKey() {
+async function saveApiKey() {
   const key = document.getElementById('pexels-key').value.trim();
   if (!currentTeacher) return;
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  if (!profiles[currentTeacher]) profiles[currentTeacher] = {};
-  profiles[currentTeacher].pexelsKey = key;
-  localStorage.setItem('teacher-profiles', JSON.stringify(profiles));
-  if (key) {
-    document.getElementById('api-key-section').style.display = 'none';
-    document.getElementById('btn-change-api').style.display = 'inline-block';
-  } else {
-    document.getElementById('api-key-section').style.display = 'block';
-    document.getElementById('btn-change-api').style.display = 'none';
+  try {
+    await teacherDb(currentUid).child('profile/pexelsKey').set(key);
+    if (key) {
+      document.getElementById('api-key-section').style.display = 'none';
+      document.getElementById('btn-change-api').style.display = 'inline-block';
+    } else {
+      document.getElementById('api-key-section').style.display = 'block';
+      document.getElementById('btn-change-api').style.display = 'none';
+    }
+  } catch (e) {
+    alert('Erreur lors de la sauvegarde de la clé API.');
   }
 }
 
@@ -1473,7 +1619,7 @@ function openApiSection() {
 }
 
 function saveLists() {
-  localStorage.setItem(listsKey(), JSON.stringify(lists));
+  fbSaveLists(currentUid, lists);
 }
 
 function refreshListSelect() {
@@ -1513,6 +1659,22 @@ function deleteList() {
   refreshListSelect();
 }
 
+function renameList() {
+  const name = document.getElementById('list-select').value;
+  if (!name) return alert('Sélectionne d\'abord une liste.');
+  const newName = prompt('Nouveau nom de la liste :', name);
+  if (!newName) return;
+  const trimmed = newName.trim();
+  if (!trimmed) return;
+  if (trimmed === name) return;
+  if (lists[trimmed]) return alert('Une liste avec ce nom existe déjà.');
+  lists[trimmed] = lists[name];
+  delete lists[name];
+  saveLists();
+  currentListName = trimmed;
+  refreshListSelect();
+}
+
 function loadList() {
   currentListName = document.getElementById('list-select').value;
   if (!currentListName) {
@@ -1526,8 +1688,7 @@ function loadList() {
 
 function renderResults() {
   const container = document.getElementById('results-container');
-  const allResults = JSON.parse(localStorage.getItem(resultsKey()) || '{}');
-  const listResults = allResults[currentListName] || [];
+  const listResults = (cachedResults[currentListName] || []);
 
   if (listResults.length === 0) {
     container.innerHTML = '<p style="color:#999; font-size:0.9em;">Aucun résultat pour cette liste.</p>';
@@ -1676,22 +1837,21 @@ function toggleDeleteMenu() {
 
 function deleteStudentResults(scope) {
   const studentName = document.getElementById('student-modal-title').textContent.replace('👤 ', '').trim();
-  const allResults = JSON.parse(localStorage.getItem(resultsKey()) || '{}');
 
   if (scope === 'list') {
     const listLabel = currentListName ? ' sur la liste "' + currentListName + '"' : '';
     if (!confirm('Supprimer les résultats de ' + studentName + listLabel + ' ? Cette action est irréversible.')) return;
-    if (allResults[currentListName]) {
-      allResults[currentListName] = allResults[currentListName].filter(r => r.student !== studentName);
+    if (cachedResults[currentListName]) {
+      cachedResults[currentListName] = cachedResults[currentListName].filter(r => r.student !== studentName);
     }
   } else {
     if (!confirm('Supprimer TOUS les résultats de ' + studentName + ' (toutes les listes) ? Cette action est irréversible.')) return;
-    Object.keys(allResults).forEach(listName => {
-      allResults[listName] = allResults[listName].filter(r => r.student !== studentName);
+    Object.keys(cachedResults).forEach(listName => {
+      cachedResults[listName] = cachedResults[listName].filter(r => r.student !== studentName);
     });
   }
 
-  localStorage.setItem(resultsKey(), JSON.stringify(allResults));
+  fbSaveResults(currentUid, cachedResults);
   closeStudentModal();
   renderResults();
 }
@@ -1699,7 +1859,7 @@ function deleteStudentResults(scope) {
 function exportStudentPDF() {
   const { jsPDF } = window.jspdf;
   const studentName = document.getElementById('student-modal-title').textContent.replace('👤 ', '').trim();
-  const allResults = JSON.parse(localStorage.getItem(resultsKey()) || '{}');
+  const allResults = cachedResults;
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = 210;
@@ -1800,6 +1960,39 @@ function exportStudentPDF() {
 // =============================================
 //  ENSEIGNANT — MOTS + IMAGES
 // =============================================
+function slotThumbHtml(val, wordIdx, slotType) {
+  if (!val) return '';
+  if (val.startsWith('text:')) {
+    const txt = val.slice(5);
+    const border = slotType === 0 ? '#4caf50' : '#f44336';
+    const bg = slotType === 0 ? '#e8f5e9' : '#fff3f3';
+    return `<span class="word-thumb-text" title="Cliquer pour modifier le texte" onclick="editWordText(${wordIdx}, ${slotType})" style="border:2px solid ${border}; background:${bg}; color:#333;">${txt}</span>`;
+  } else {
+    if (slotType === 0) {
+      return `<img src="${val}" alt="bonne réponse" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${wordIdx}, 0)" style="border:2px solid #4caf50;">`;
+    } else {
+      return `<img src="${val}" alt="piège" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${wordIdx}, ${slotType})" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">`;
+    }
+  }
+}
+
+function editWordText(wordIdx, slotType) {
+  const item = lists[currentListName][wordIdx];
+  const currentVal = slotType === 0 ? item.image : item.distractors[slotType - 1];
+  const currentText = currentVal && currentVal.startsWith('text:') ? currentVal.slice(5) : '';
+  const newText = prompt('Modifier le texte :', currentText);
+  if (newText === null) return;
+  const trimmed = newText.trim();
+  if (!trimmed) return;
+  if (slotType === 0) {
+    item.image = 'text:' + trimmed;
+  } else {
+    item.distractors[slotType - 1] = 'text:' + trimmed;
+  }
+  saveLists();
+  renderWordList();
+}
+
 function renderWordList() {
   const ul = document.getElementById('word-list');
   ul.innerHTML = '';
@@ -1809,9 +2002,9 @@ function renderWordList() {
     const li = document.createElement('li');
     li.className = 'word-item';
     li.innerHTML = `
-      <img src="${item.image}" alt="${item.word}" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 0)" style="border:2px solid #4caf50;">
-      ${d1 ? `<img src="${d1}" alt="piège" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 1)" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
-      ${d2 ? `<img src="${d2}" alt="piège" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 2)" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
+      ${slotThumbHtml(item.image, idx, 0)}
+      ${slotThumbHtml(d1, idx, 1)}
+      ${slotThumbHtml(d2, idx, 2)}
       <span class="word-text">${item.word}</span>
       <div style="display:flex; flex-direction:column; gap:2px;">
         <button class="btn-move" onclick="moveWord(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
@@ -1848,23 +2041,43 @@ function startWordEdit(idx) {
   // Pré-remplir le champ nom
   document.getElementById('new-word').value = item.word;
 
-  // Pré-remplir les 3 slots avec les images existantes
+  // Pré-remplir les 3 slots avec les valeurs existantes
   slotImages = [item.image, item.distractors[0] || '', item.distractors[1] || ''];
+  slotTypes = ['image', 'image', 'image'];
   for (let i = 0; i < 3; i++) {
+    const val = slotImages[i];
     const slot = document.getElementById('slot-' + i);
     slot.classList.remove('active');
-    if (slotImages[i]) {
+    if (!val) {
+      clearSlot(i);
+    } else if (val.startsWith('text:')) {
+      slotTypes[i] = 'text';
+      document.getElementById('slot-' + i + '-img-btn').classList.remove('active');
+      document.getElementById('slot-' + i + '-txt-btn').classList.add('active');
+      const textInput = document.getElementById('slot-' + i + '-text');
+      textInput.style.display = 'block';
+      textInput.value = val.slice(5);
+      slot.classList.add('filled');
+      const img = slot.querySelector('img');
+      if (img) img.remove();
+      const hint = slot.querySelector('.slot-hint');
+      if (hint) hint.style.display = 'none';
+    } else {
+      slotTypes[i] = 'image';
+      document.getElementById('slot-' + i + '-img-btn').classList.add('active');
+      document.getElementById('slot-' + i + '-txt-btn').classList.remove('active');
+      const textInput = document.getElementById('slot-' + i + '-text');
+      textInput.style.display = 'none';
+      textInput.value = '';
       slot.classList.add('filled');
       let img = slot.querySelector('img');
       if (!img) {
         img = document.createElement('img');
         slot.insertBefore(img, slot.querySelector('.slot-label'));
       }
-      img.src = slotImages[i];
+      img.src = val;
       const hint = slot.querySelector('.slot-hint');
       if (hint) hint.style.display = 'none';
-    } else {
-      clearSlot(i);
     }
   }
 
@@ -1891,6 +2104,7 @@ function closeImagePicker() {
 }
 
 function activateSlot(idx) {
+  if (slotTypes[idx] === 'text') return; // slot texte : ne pas ouvrir le picker
   activeSlot = idx;
   editingWordCtx = null;
   document.querySelectorAll('.img-slot').forEach(s => s.classList.remove('active'));
@@ -1903,14 +2117,77 @@ function activateSlot(idx) {
   document.getElementById('search-query').focus();
 }
 
+function setSlotType(idx, type) {
+  slotTypes[idx] = type;
+  const imgBtn = document.getElementById('slot-' + idx + '-img-btn');
+  const txtBtn = document.getElementById('slot-' + idx + '-txt-btn');
+  const textInput = document.getElementById('slot-' + idx + '-text');
+  const slot = document.getElementById('slot-' + idx);
+
+  // Vider le slot existant
+  slotImages[idx] = '';
+  slot.classList.remove('filled', 'active');
+  const img = slot.querySelector('img');
+  if (img) img.remove();
+  const hint = slot.querySelector('.slot-hint');
+
+  if (type === 'image') {
+    imgBtn.classList.add('active');
+    txtBtn.classList.remove('active');
+    textInput.style.display = 'none';
+    textInput.value = '';
+    if (hint) hint.style.display = '';
+    // Fermer le picker si c'était ce slot
+    if (activeSlot === idx) {
+      activeSlot = -1;
+      document.getElementById('image-picker').style.display = 'none';
+      document.getElementById('image-results').innerHTML = '';
+    }
+  } else {
+    imgBtn.classList.remove('active');
+    txtBtn.classList.add('active');
+    textInput.style.display = 'block';
+    if (hint) hint.style.display = 'none';
+    // Fermer le picker si ouvert pour ce slot
+    if (activeSlot === idx) {
+      activeSlot = -1;
+      document.getElementById('image-picker').style.display = 'none';
+      document.getElementById('image-results').innerHTML = '';
+    }
+    textInput.focus();
+  }
+  checkAddButton();
+}
+
+function onSlotTextInput(idx) {
+  const val = document.getElementById('slot-' + idx + '-text').value.trim();
+  const slot = document.getElementById('slot-' + idx);
+  if (val) {
+    slotImages[idx] = 'text:' + val;
+    slot.classList.add('filled');
+  } else {
+    slotImages[idx] = '';
+    slot.classList.remove('filled');
+  }
+  checkAddButton();
+}
+
 function clearSlot(idx) {
   slotImages[idx] = '';
+  slotTypes[idx] = 'image';
   const slot = document.getElementById('slot-' + idx);
-  slot.classList.remove('filled');
+  slot.classList.remove('filled', 'active');
   const img = slot.querySelector('img');
   if (img) img.remove();
   const hint = slot.querySelector('.slot-hint');
   if (hint) hint.style.display = '';
+  // Réinitialiser le toggle
+  const imgBtn = document.getElementById('slot-' + idx + '-img-btn');
+  const txtBtn = document.getElementById('slot-' + idx + '-txt-btn');
+  const textInput = document.getElementById('slot-' + idx + '-text');
+  if (imgBtn) imgBtn.classList.add('active');
+  if (txtBtn) txtBtn.classList.remove('active');
+  if (textInput) { textInput.style.display = 'none'; textInput.value = ''; }
   checkAddButton();
 }
 
@@ -1951,6 +2228,7 @@ function checkAddButton() {
 
 function resetSlots() {
   slotImages = ['', '', ''];
+  slotTypes = ['image', 'image', 'image'];
   activeSlot = -1;
   editingWordIdx = null;
   for (let i = 0; i < 3; i++) clearSlot(i);
@@ -1963,8 +2241,7 @@ function resetSlots() {
 async function searchImages() {
   const query = document.getElementById('search-query').value.trim();
   if (!query) return alert('Entre un mot pour chercher.');
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  const key = (profiles[currentTeacher] && profiles[currentTeacher].pexelsKey) || document.getElementById('pexels-key').value.trim();
+  const key = document.getElementById('pexels-key').value.trim();
   if (!key) return alert('Entre ta clé API Pexels dans le champ en haut de la page.');
 
   const container = document.getElementById('image-results');
@@ -2015,8 +2292,7 @@ function closeEditImgModal() {
 async function searchEditImg() {
   const query = document.getElementById('edit-img-search').value.trim();
   if (!query) return alert('Entre un mot pour chercher.');
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  const key = (profiles[currentTeacher] && profiles[currentTeacher].pexelsKey) || '';
+  const key = document.getElementById('pexels-key').value.trim();
   if (!key) return alert('Entre ta clé API Pexels dans le champ en haut de la page.');
   const container = document.getElementById('edit-img-results');
   container.innerHTML = '<p style="color:#999;">Recherche en cours...</p>';
@@ -2129,10 +2405,6 @@ function addWord() {
 function startGame(listName) {
   gameListName = listName;
   gameWords = [...lists[listName]];
-  for (let i = gameWords.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [gameWords[i], gameWords[j]] = [gameWords[j], gameWords[i]];
-  }
   gameIndex = 0;
   gameStars = 0;
   firstAttemptResults = gameWords.map(() => true); // par défaut, premier coup réussi
@@ -2182,7 +2454,11 @@ function renderChoices() {
   allImages.forEach(item => {
     const card = document.createElement('div');
     card.className = 'choice-card';
-    card.innerHTML = `<img src="${item.url}" alt="">`;
+    if (item.url && item.url.startsWith('text:')) {
+      card.innerHTML = `<span class="choice-text">${item.url.slice(5)}</span>`;
+    } else {
+      card.innerHTML = `<img src="${item.url}" alt="">`;
+    }
     card.onclick = () => handleChoice(card, item.isCorrect);
     container.appendChild(card);
   });
@@ -2236,9 +2512,8 @@ function endGame() {
   const pct = Math.round(firstCorrect / gameWords.length * 100);
 
   // Sauvegarder les résultats
-  const results = JSON.parse(localStorage.getItem(resultsKey()) || '{}');
-  if (!results[gameListName]) results[gameListName] = [];
-  results[gameListName].push({
+  if (!cachedResults[gameListName]) cachedResults[gameListName] = [];
+  cachedResults[gameListName].push({
     date: new Date().toLocaleString('fr-FR'),
     student: studentName,
     total: gameWords.length,
@@ -2246,7 +2521,7 @@ function endGame() {
     percent: pct,
     details: gameWords.map((w, i) => ({ word: w.word, firstAttempt: firstAttemptResults[i] }))
   });
-  localStorage.setItem(resultsKey(), JSON.stringify(results));
+  fbSaveResults(currentUid, cachedResults);
 
   const endDiv = document.getElementById('game-end');
   document.getElementById('end-stars').textContent = '⭐'.repeat(gameStars);
@@ -2296,6 +2571,7 @@ function playTone(freqs, duration, type) {
 function acceptRGPD() {
   localStorage.setItem('rgpd-consent', 'true');
   document.getElementById('rgpd-banner').classList.remove('show');
+  initLoginScreen();
 }
 
 function refuseRGPD() {
@@ -2311,14 +2587,22 @@ function refuseRGPD() {
   document.getElementById('login').appendChild(msg);
 }
 
-function deleteMyAccount() {
+async function deleteMyAccount() {
   if (!confirm('Supprimer définitivement votre compte, vos listes et tous vos résultats ? Cette action est irréversible.')) return;
-  localStorage.removeItem(listsKey());
-  localStorage.removeItem(resultsKey());
-  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
-  delete profiles[currentTeacher];
-  localStorage.setItem('teacher-profiles', JSON.stringify(profiles));
-  logout();
+  setLoading(true);
+  try {
+    // Supprimer les données Firebase
+    await teacherDb(currentUid).remove();
+    await db.ref('usernames/' + fbKey(currentTeacher)).remove();
+    // Supprimer le compte Firebase Auth
+    await auth.currentUser.delete();
+    localStorage.removeItem('vocapps-has-account');
+    setLoading(false);
+    logout();
+  } catch (e) {
+    setLoading(false);
+    alert('Erreur lors de la suppression. Vérifiez votre connexion.');
+  }
 }
 
 // =============================================
@@ -2326,8 +2610,9 @@ function deleteMyAccount() {
 // =============================================
 if (!localStorage.getItem('rgpd-consent')) {
   document.getElementById('rgpd-banner').classList.add('show');
+} else {
+  initLoginScreen();
 }
-initLoginScreen();
 
 // Enregistrement du Service Worker pour le mode hors ligne
 if ('serviceWorker' in navigator) {
