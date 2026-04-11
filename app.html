@@ -1173,6 +1173,25 @@
   </div>
 </div>
 
+<!-- Modal édition image mot -->
+<div id="edit-img-modal" style="display:none; position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.6); z-index:400; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:white; border-radius:16px; padding:20px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 id="edit-img-title" style="font-size:1.1em; color:#333;">Changer l'image</h3>
+      <button onclick="closeEditImgModal()" style="background:#eee; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;">× Fermer</button>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <input type="text" id="edit-img-search" placeholder="Chercher une image..." style="flex:1; padding:8px 12px; border:2px solid #ddd; border-radius:8px; font-size:0.95em;" onkeydown="if(event.key==='Enter') searchEditImg()">
+      <button onclick="searchEditImg()" class="btn-action btn-blue">Chercher</button>
+    </div>
+    <div class="upload-zone" onclick="document.getElementById('edit-img-upload').click()" style="margin-bottom:10px;">
+      Ou cliquer ici pour télécharger une image
+    </div>
+    <input type="file" id="edit-img-upload" accept="image/*" style="display:none" onchange="handleEditImgUpload(event)">
+    <div id="edit-img-results" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+  </div>
+</div>
+
 <!-- Modal résultats élève toutes listes -->
 <div id="student-modal">
   <div class="student-modal-box">
@@ -1208,6 +1227,7 @@ let currentListName = '';
 let activeSlot = -1;          // emplacement en cours de remplissage (0, 1 ou 2)
 let slotImages = ['', '', '']; // URLs des 3 images
 let editingWordCtx = null;    // { wordIdx, slotType } quand on édite une image existante
+let editingWordIdx = null;    // index du mot en cours d'édition complète (null = nouveau mot)
 
 // Jeu
 let gameWords = [];
@@ -1780,10 +1800,8 @@ function renderWordList() {
       <img src="${item.image}" alt="${item.word}" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 0)" style="border:2px solid #4caf50;">
       ${d1 ? `<img src="${d1}" alt="piège" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 1)" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
       ${d2 ? `<img src="${d2}" alt="piège" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 2)" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
-      <span class="word-text" id="word-text-${idx}">${item.word}</span>
-      <input class="word-edit-input" id="word-edit-${idx}" type="text" value="${item.word}" style="display:none;" onkeydown="if(event.key==='Enter') saveWordName(${idx}); if(event.key==='Escape') cancelWordEdit(${idx});">
-      <button class="btn-edit" id="btn-edit-${idx}" onclick="startWordEdit(${idx})">✏️</button>
-      <button class="btn-edit btn-save" id="btn-save-${idx}" onclick="saveWordName(${idx})" style="display:none;">✓</button>
+      <span class="word-text">${item.word}</span>
+      <button class="btn-edit" onclick="startWordEdit(${idx})" title="Modifier ce mot">✏️</button>
       <button class="btn-del" onclick="removeWord(${idx})">×</button>
     `;
     ul.appendChild(li);
@@ -1797,26 +1815,41 @@ function removeWord(idx) {
 }
 
 function startWordEdit(idx) {
-  document.getElementById('word-text-' + idx).style.display = 'none';
-  document.getElementById('btn-edit-' + idx).style.display = 'none';
-  document.getElementById('word-edit-' + idx).style.display = 'inline-block';
-  document.getElementById('btn-save-' + idx).style.display = 'inline-block';
-  document.getElementById('word-edit-' + idx).focus();
-}
+  const item = lists[currentListName][idx];
+  editingWordIdx = idx;
 
-function cancelWordEdit(idx) {
-  document.getElementById('word-text-' + idx).style.display = '';
-  document.getElementById('btn-edit-' + idx).style.display = '';
-  document.getElementById('word-edit-' + idx).style.display = 'none';
-  document.getElementById('btn-save-' + idx).style.display = 'none';
-}
+  // Pré-remplir le champ nom
+  document.getElementById('new-word').value = item.word;
 
-function saveWordName(idx) {
-  const newName = document.getElementById('word-edit-' + idx).value.trim();
-  if (!newName) return;
-  lists[currentListName][idx].word = newName;
-  saveLists();
-  renderWordList();
+  // Pré-remplir les 3 slots avec les images existantes
+  slotImages = [item.image, item.distractors[0] || '', item.distractors[1] || ''];
+  for (let i = 0; i < 3; i++) {
+    const slot = document.getElementById('slot-' + i);
+    slot.classList.remove('active');
+    if (slotImages[i]) {
+      slot.classList.add('filled');
+      let img = slot.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        slot.insertBefore(img, slot.querySelector('.slot-label'));
+      }
+      img.src = slotImages[i];
+      const hint = slot.querySelector('.slot-hint');
+      if (hint) hint.style.display = 'none';
+    } else {
+      clearSlot(i);
+    }
+  }
+
+  // Changer le bouton "Ajouter" en "Enregistrer"
+  const btn = document.getElementById('btn-add-word');
+  btn.textContent = 'Enregistrer les modifications';
+  btn.style.display = 'block';
+
+  // Afficher la section et scroller dessus
+  document.getElementById('add-word-section').style.display = 'block';
+  document.getElementById('new-word').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('new-word').focus();
 }
 
 // =============================================
@@ -1832,6 +1865,7 @@ function closeImagePicker() {
 
 function activateSlot(idx) {
   activeSlot = idx;
+  editingWordCtx = null;
   document.querySelectorAll('.img-slot').forEach(s => s.classList.remove('active'));
   document.getElementById('slot-' + idx).classList.add('active');
   document.getElementById('image-picker').style.display = 'block';
@@ -1891,10 +1925,12 @@ function checkAddButton() {
 function resetSlots() {
   slotImages = ['', '', ''];
   activeSlot = -1;
+  editingWordIdx = null;
   for (let i = 0; i < 3; i++) clearSlot(i);
   document.querySelectorAll('.img-slot').forEach(s => s.classList.remove('active'));
   document.getElementById('image-picker').style.display = 'none';
   document.getElementById('btn-add-word').style.display = 'none';
+  document.getElementById('btn-add-word').textContent = 'Ajouter ce mot à la liste';
 }
 
 async function searchImages() {
@@ -1934,11 +1970,56 @@ async function searchImages() {
 function editWordImage(wordIdx, slotType) {
   editingWordCtx = { wordIdx, slotType };
   const word = lists[currentListName][wordIdx].word;
-  document.getElementById('image-picker').style.display = 'block';
-  document.getElementById('image-results').innerHTML = '';
-  document.getElementById('search-query').value = word;
-  document.getElementById('image-picker').scrollIntoView({ behavior: 'smooth' });
-  document.getElementById('search-query').focus();
+  const labels = ['bonne réponse', 'piège 1', 'piège 2'];
+  document.getElementById('edit-img-title').textContent = '"' + word + '" — ' + labels[slotType];
+  document.getElementById('edit-img-search').value = word;
+  document.getElementById('edit-img-results').innerHTML = '';
+  const modal = document.getElementById('edit-img-modal');
+  modal.style.display = 'flex';
+  document.getElementById('edit-img-search').focus();
+}
+
+function closeEditImgModal() {
+  document.getElementById('edit-img-modal').style.display = 'none';
+  document.getElementById('edit-img-results').innerHTML = '';
+  editingWordCtx = null;
+}
+
+async function searchEditImg() {
+  const query = document.getElementById('edit-img-search').value.trim();
+  if (!query) return alert('Entre un mot pour chercher.');
+  const profiles = JSON.parse(localStorage.getItem('teacher-profiles') || '{}');
+  const key = (profiles[currentTeacher] && profiles[currentTeacher].pexelsKey) || '';
+  if (!key) return alert('Entre ta clé API Pexels dans le champ en haut de la page.');
+  const container = document.getElementById('edit-img-results');
+  container.innerHTML = '<p style="color:#999;">Recherche en cours...</p>';
+  try {
+    const resp = await fetch('https://api.pexels.com/v1/search?query=' + encodeURIComponent(query) + '&per_page=9&locale=fr-FR', {
+      headers: { 'Authorization': key }
+    });
+    if (!resp.ok) throw new Error();
+    const data = await resp.json();
+    container.innerHTML = '';
+    if (data.photos.length === 0) { container.innerHTML = '<p style="color:#999;">Aucune image trouvée.</p>'; return; }
+    data.photos.forEach(photo => {
+      const img = document.createElement('img');
+      img.src = photo.src.medium;
+      img.style.cssText = 'width:120px; height:90px; object-fit:contain; border-radius:8px; cursor:pointer; border:3px solid transparent;';
+      img.onclick = () => applySelectedImage(photo.src.medium);
+      container.appendChild(img);
+    });
+  } catch (e) {
+    container.innerHTML = '<p style="color:red;">Erreur : vérifie ta clé API Pexels.</p>';
+  }
+}
+
+function handleEditImgUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => applySelectedImage(e.target.result);
+  reader.readAsDataURL(file);
+  event.target.value = '';
 }
 
 function selectImage(url) {
@@ -1968,8 +2049,8 @@ function applySelectedImage(dataUrl) {
     }
     saveLists();
     editingWordCtx = null;
-    document.getElementById('image-picker').style.display = 'none';
-    document.getElementById('image-results').innerHTML = '';
+    document.getElementById('edit-img-modal').style.display = 'none';
+    document.getElementById('edit-img-results').innerHTML = '';
     renderWordList();
   } else {
     fillSlot(dataUrl);
@@ -1989,11 +2070,23 @@ function addWord() {
   const word = document.getElementById('new-word').value.trim();
   if (!word || !slotImages.every(s => s) || !currentListName) return;
 
-  lists[currentListName].push({
-    word: word,
-    image: slotImages[0],
-    distractors: [slotImages[1], slotImages[2]]
-  });
+  if (editingWordIdx !== null) {
+    // Modification d'un mot existant
+    lists[currentListName][editingWordIdx] = {
+      word: word,
+      image: slotImages[0],
+      distractors: [slotImages[1], slotImages[2]]
+    };
+    editingWordIdx = null;
+    document.getElementById('btn-add-word').textContent = 'Ajouter ce mot à la liste';
+  } else {
+    // Nouveau mot
+    lists[currentListName].push({
+      word: word,
+      image: slotImages[0],
+      distractors: [slotImages[1], slotImages[2]]
+    });
+  }
   saveLists();
 
   // Reset
