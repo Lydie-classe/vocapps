@@ -222,7 +222,7 @@
     }
     .search-img {
       width: 100%;
-      aspect-ratio: 1;
+      height: 120px;
       object-fit: contain;
       border-radius: 10px;
       cursor: pointer;
@@ -434,6 +434,35 @@
       cursor: pointer;
       font-size: 1.1em;
     }
+    .btn-edit {
+      background: #e3f2fd;
+      color: #1565c0;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 0.95em;
+    }
+    .btn-edit.btn-save {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .word-edit-input {
+      flex: 1;
+      padding: 4px 8px;
+      border: 2px solid #1565c0;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+    .word-item .editable-img {
+      cursor: pointer;
+      position: relative;
+      transition: opacity 0.2s;
+    }
+    .word-item .editable-img:hover {
+      opacity: 0.7;
+    }
 
     /* Clé API */
     .api-key-section {
@@ -635,7 +664,7 @@
     #feedback-overlay {
       display: none;
       position: fixed;
-      inset: 0;
+      top: 0; right: 0; bottom: 0; left: 0;
       background: rgba(0,0,0,0.3);
       align-items: center;
       justify-content: center;
@@ -673,7 +702,7 @@
     #rgpd-banner {
       display: none;
       position: fixed;
-      inset: 0;
+      top: 0; right: 0; bottom: 0; left: 0;
       background: rgba(0,0,0,0.6);
       z-index: 500;
       align-items: center;
@@ -731,7 +760,7 @@
     #student-modal {
       display: none;
       position: fixed;
-      inset: 0;
+      top: 0; right: 0; bottom: 0; left: 0;
       background: rgba(0,0,0,0.5);
       z-index: 300;
       align-items: flex-start;
@@ -798,7 +827,7 @@
       justify-content: center;
       gap: 20px;
       position: fixed;
-      inset: 0;
+      top: 0; right: 0; bottom: 0; left: 0;
       background: linear-gradient(135deg, #667eea, #764ba2);
       color: white;
       text-align: center;
@@ -1178,6 +1207,7 @@ function resultsKey() { return 'vocab-results-' + currentTeacher; }
 let currentListName = '';
 let activeSlot = -1;          // emplacement en cours de remplissage (0, 1 ou 2)
 let slotImages = ['', '', '']; // URLs des 3 images
+let editingWordCtx = null;    // { wordIdx, slotType } quand on édite une image existante
 
 // Jeu
 let gameWords = [];
@@ -1747,10 +1777,13 @@ function renderWordList() {
     const li = document.createElement('li');
     li.className = 'word-item';
     li.innerHTML = `
-      <img src="${item.image}" alt="${item.word}" style="border:2px solid #4caf50;">
-      ${d1 ? `<img src="${d1}" alt="piège" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
-      ${d2 ? `<img src="${d2}" alt="piège" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
-      <span class="word-text">${item.word}</span>
+      <img src="${item.image}" alt="${item.word}" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 0)" style="border:2px solid #4caf50;">
+      ${d1 ? `<img src="${d1}" alt="piège" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 1)" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
+      ${d2 ? `<img src="${d2}" alt="piège" class="editable-img" title="Cliquer pour changer l'image" onclick="editWordImage(${idx}, 2)" style="border:2px solid #f44336; width:40px; height:40px; object-fit:contain; border-radius:6px;">` : ''}
+      <span class="word-text" id="word-text-${idx}">${item.word}</span>
+      <input class="word-edit-input" id="word-edit-${idx}" type="text" value="${item.word}" style="display:none;" onkeydown="if(event.key==='Enter') saveWordName(${idx}); if(event.key==='Escape') cancelWordEdit(${idx});">
+      <button class="btn-edit" id="btn-edit-${idx}" onclick="startWordEdit(${idx})">✏️</button>
+      <button class="btn-edit btn-save" id="btn-save-${idx}" onclick="saveWordName(${idx})" style="display:none;">✓</button>
       <button class="btn-del" onclick="removeWord(${idx})">×</button>
     `;
     ul.appendChild(li);
@@ -1763,11 +1796,35 @@ function removeWord(idx) {
   renderWordList();
 }
 
+function startWordEdit(idx) {
+  document.getElementById('word-text-' + idx).style.display = 'none';
+  document.getElementById('btn-edit-' + idx).style.display = 'none';
+  document.getElementById('word-edit-' + idx).style.display = 'inline-block';
+  document.getElementById('btn-save-' + idx).style.display = 'inline-block';
+  document.getElementById('word-edit-' + idx).focus();
+}
+
+function cancelWordEdit(idx) {
+  document.getElementById('word-text-' + idx).style.display = '';
+  document.getElementById('btn-edit-' + idx).style.display = '';
+  document.getElementById('word-edit-' + idx).style.display = 'none';
+  document.getElementById('btn-save-' + idx).style.display = 'none';
+}
+
+function saveWordName(idx) {
+  const newName = document.getElementById('word-edit-' + idx).value.trim();
+  if (!newName) return;
+  lists[currentListName][idx].word = newName;
+  saveLists();
+  renderWordList();
+}
+
 // =============================================
 //  ENSEIGNANT — SLOTS D'IMAGES
 // =============================================
 function closeImagePicker() {
   activeSlot = -1;
+  editingWordCtx = null;
   document.querySelectorAll('.img-slot').forEach(s => s.classList.remove('active'));
   document.getElementById('image-picker').style.display = 'none';
   document.getElementById('image-results').innerHTML = '';
@@ -1874,6 +1931,16 @@ async function searchImages() {
   }
 }
 
+function editWordImage(wordIdx, slotType) {
+  editingWordCtx = { wordIdx, slotType };
+  const word = lists[currentListName][wordIdx].word;
+  document.getElementById('image-picker').style.display = 'block';
+  document.getElementById('image-results').innerHTML = '';
+  document.getElementById('search-query').value = word;
+  document.getElementById('image-picker').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('search-query').focus();
+}
+
 function selectImage(url) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
@@ -1885,17 +1952,35 @@ function selectImage(url) {
     canvas.width = Math.round(img.width * ratio);
     canvas.height = Math.round(img.height * ratio);
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    fillSlot(canvas.toDataURL('image/jpeg', 0.8));
+    applySelectedImage(canvas.toDataURL('image/jpeg', 0.8));
   };
-  img.onerror = () => fillSlot(url); // fallback si CORS bloqué
+  img.onerror = () => applySelectedImage(url);
   img.src = url;
+}
+
+function applySelectedImage(dataUrl) {
+  if (editingWordCtx !== null) {
+    const { wordIdx, slotType } = editingWordCtx;
+    if (slotType === 0) {
+      lists[currentListName][wordIdx].image = dataUrl;
+    } else {
+      lists[currentListName][wordIdx].distractors[slotType - 1] = dataUrl;
+    }
+    saveLists();
+    editingWordCtx = null;
+    document.getElementById('image-picker').style.display = 'none';
+    document.getElementById('image-results').innerHTML = '';
+    renderWordList();
+  } else {
+    fillSlot(dataUrl);
+  }
 }
 
 function handleUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => fillSlot(e.target.result);
+  reader.onload = (e) => applySelectedImage(e.target.result);
   reader.readAsDataURL(file);
   event.target.value = '';
 }
