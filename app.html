@@ -1573,7 +1573,7 @@ async function showStudentSelect() {
   const container = document.getElementById('student-lists');
   container.innerHTML = '<p style="color:#999;">Chargement...</p>';
   try {
-    lists = await fbGetLists(currentTeacher);
+    lists = await fbGetLists(currentUid);
     container.innerHTML = '';
     const names = Object.keys(lists).filter(n => lists[n].length >= 1 && lists[n].every(w => w.distractors && w.distractors.length === 2));
     if (names.length === 0) {
