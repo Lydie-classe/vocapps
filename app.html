@@ -1237,13 +1237,13 @@
     <h2>🔒 Protection des données (RGPD)</h2>
     <p>Avant d'utiliser <strong>Vocapps</strong>, veuillez prendre connaissance des informations suivantes :</p>
     <ul>
-      <li><strong>Données collectées :</strong> identifiants enseignants, listes de mots, prénoms et résultats des élèves.</li>
-      <li><strong>Stockage :</strong> toutes les données sont enregistrées <strong>uniquement sur cet appareil</strong> (mémoire locale du navigateur). Aucune donnée n'est envoyée à un serveur.</li>
-      <li><strong>Service externe :</strong> la recherche d'images utilise <strong>Pexels.com</strong>. Les termes de recherche saisis sont transmis à ce service.</li>
+      <li><strong>Données collectées :</strong> identifiant, adresse email et mot de passe de l'enseignant ; listes de mots et images ; prénoms et résultats des élèves.</li>
+      <li><strong>Stockage :</strong> les données sont enregistrées sur des serveurs sécurisés <strong>situés en Europe</strong>, via le service <strong>Firebase</strong> (Google). Google agit en tant que sous-traitant et s'engage contractuellement à respecter le RGPD.</li>
+      <li><strong>Services externes :</strong> la recherche d'images utilise <strong>Pexels.com</strong> (les termes de recherche saisis sont transmis à ce service). L'authentification utilise <strong>Firebase Auth</strong> (Google).</li>
       <li><strong>Durée :</strong> les données sont conservées jusqu'à leur suppression manuelle ou la suppression du compte.</li>
-      <li><strong>Droits :</strong> chaque enseignant peut supprimer son compte et toutes ses données depuis son espace.</li>
+      <li><strong>Droits :</strong> conformément au RGPD, chaque enseignant peut accéder à ses données, les modifier ou les supprimer intégralement depuis son espace. Les données des élèves (prénoms et résultats) sont supprimées avec le compte de l'enseignant.</li>
     </ul>
-    <p class="rgpd-note">En cliquant sur "Accepter et continuer", vous consentez à l'enregistrement local de ces données dans le cadre de l'utilisation pédagogique de l'application. Ce consentement est requis pour utiliser Vocapps.</p>
+    <p class="rgpd-note">En cliquant sur "Accepter et continuer", vous consentez à l'enregistrement et au traitement de ces données dans le cadre de l'utilisation pédagogique de l'application. Ce consentement est requis pour utiliser Vocapps.</p>
     <div class="rgpd-btns">
       <button class="btn-rgpd-accept" onclick="acceptRGPD()">Accepter et continuer</button>
       <button class="btn-rgpd-refuse" onclick="refuseRGPD()">Refuser</button>
